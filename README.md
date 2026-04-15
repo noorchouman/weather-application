@@ -1,16 +1,42 @@
-# React + Vite
+# Weatherly
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+![React](https://img.shields.io/badge/React-18-blue?logo=react)
+![Vite](https://img.shields.io/badge/Vite-fast-purple?logo=vite)
+![API](https://img.shields.io/badge/API-Open--Meteo-green)
+![Status](https://img.shields.io/badge/Status-Complete-success)
 
-Currently, two official plugins are available:
+A modern, responsive weather web application built with **React + Vite** that provides real-time weather data, hourly forecasts, and weekly insights.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+---
 
-## React Compiler
+## Features
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+-  Smart search with autocomplete (type `"bar"` → Barcelona)
+-  Works for **any city worldwide**
+-  Current weather display
+-  Hourly forecast (today)
+-  Weekly forecast (7 days)
+-  Weather stats:
+  - Humidity
+  - Wind speed
+  - Pressure
+  - Visibility
+-  Extra details:
+  - Sunrise & sunset
+  - UV index
+  - Wind gusts
+  - Cloud cover
+-  Clean, modern UI inspired by real dashboards
 
-## Expanding the ESLint configuration
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+---
+
+##  How It Works
+
+- Uses **Open-Meteo API** for weather data
+- Uses **Geocoding API** for city search & autocomplete
+- Custom hooks manage:
+  - API calls
+  - search logic
+  - state management
+- Components split for clean structure and scalability
