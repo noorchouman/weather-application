@@ -1,9 +1,26 @@
-export async function fetchPlaceSuggestions(searchText) {
+const WEATHER_API_URL =
+  import.meta.env.VITE_WEATHER_API_URL || "https://api.open-meteo.com/v1/forecast";
+
+const GEOCODING_API_URL =
+  import.meta.env.VITE_GEOCODING_API_URL ||
+  "https://geocoding-api.open-meteo.com/v1/search";
+
+const MAX_SUGGESTIONS = 6;
+const HOURLY_SLOTS = 8;
+const DAILY_SLOTS = 7;
+
+export async function fetchPlaceSuggestions(searchText, signal) {
   const res = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+    `${GEOCODING_API_URL}?name=${encodeURIComponent(
       searchText
-    )}&count=6&language=en&format=json`
+    )}&count=${MAX_SUGGESTIONS}&language=en&format=json`,
+    { signal }
   );
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch place suggestions");
+  }
+
   const data = await res.json();
 
   return (
@@ -18,12 +35,18 @@ export async function fetchPlaceSuggestions(searchText) {
   );
 }
 
-export async function fetchPlaceByName(cityName) {
+export async function fetchPlaceByName(cityName, signal) {
   const res = await fetch(
-    `https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(
+    `${GEOCODING_API_URL}?name=${encodeURIComponent(
       cityName
-    )}&count=1&language=en&format=json`
+    )}&count=1&language=en&format=json`,
+    { signal }
   );
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch location");
+  }
+
   const data = await res.json();
 
   if (!data.results || data.results.length === 0) {
@@ -40,13 +63,20 @@ export async function fetchPlaceByName(cityName) {
   };
 }
 
-export async function fetchWeatherByCoords(place) {
+export async function fetchWeatherByCoords(place, signal) {
   const res = await fetch(
-    `https://api.open-meteo.com/v1/forecast?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,surface_pressure,cloud_cover,wind_gusts_10m,is_day,precipitation&hourly=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,visibility,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&forecast_days=7&timezone=auto`
+    `${WEATHER_API_URL}?latitude=${place.latitude}&longitude=${place.longitude}&current=temperature_2m,relative_humidity_2m,apparent_temperature,weather_code,wind_speed_10m,surface_pressure,cloud_cover,wind_gusts_10m,is_day,precipitation&hourly=temperature_2m,weather_code,wind_speed_10m,relative_humidity_2m,visibility,precipitation_probability&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&forecast_days=${DAILY_SLOTS}&timezone=auto`,
+    { signal }
   );
+
+  if (!res.ok) {
+    throw new Error("Failed to fetch weather");
+  }
+
   const data = await res.json();
 
-  const hourly = data.hourly.time.slice(0, 8).map((time, i) => ({
+  const hourly = data.hourly.time.slice(0, HOURLY_SLOTS).map((time, i) => ({
+    id: time,
     time,
     temp: data.hourly.temperature_2m[i],
     code: data.hourly.weather_code[i],
@@ -54,7 +84,8 @@ export async function fetchWeatherByCoords(place) {
     humidity: data.hourly.relative_humidity_2m[i],
   }));
 
-  const daily = data.daily.time.slice(0, 7).map((day, i) => ({
+  const daily = data.daily.time.slice(0, DAILY_SLOTS).map((day, i) => ({
+    id: day,
     day,
     code: data.daily.weather_code[i],
     max: data.daily.temperature_2m_max[i],

@@ -15,49 +15,32 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("today");
 
   const {
-    input,
-    setInput,
+    searchState,
+    searchActions,
     query,
-    suggestions,
-    showSuggestions,
-    setShowSuggestions,
-    searchingPlaces,
     selectedPlace,
-    setSelectedPlace,
-    searchBoxRef,
-    handleSubmit,
-    handleSuggestionClick,
-  } = usePlaceSearch("Beirut");
+  } = usePlaceSearch();
 
   const { weather, loading, error } = useWeather(query, selectedPlace);
 
-  const currentMeta = useMemo(
-    () => getWeatherMeta(weather?.current?.weather_code ?? 1),
-    [weather]
-  );
+  const weatherCode = weather?.current?.weather_code ?? 1;
+
+  const currentMeta = useMemo(() => getWeatherMeta(weatherCode), [weatherCode]);
 
   return (
     <div className="page">
       <div className="app-shell">
         <SearchBar
-          input={input}
-          setInput={setInput}
-          handleSubmit={handleSubmit}
-          suggestions={suggestions}
-          showSuggestions={showSuggestions}
-          setShowSuggestions={setShowSuggestions}
-          searchingPlaces={searchingPlaces}
-          handleSuggestionClick={handleSuggestionClick}
-          searchBoxRef={searchBoxRef}
           weather={weather}
-          setSelectedPlace={setSelectedPlace}
+          searchState={searchState}
+          searchActions={searchActions}
         />
 
         {loading ? (
           <div className="state-box">Loading weather...</div>
         ) : error ? (
           <div className="state-box error-box">{error}</div>
-        ) : (
+        ) : weather ? (
           <main className="dashboard-grid">
             <section className="left-col">
               <CurrentWeatherCard weather={weather} currentMeta={currentMeta} />
@@ -71,7 +54,7 @@ export default function App() {
               weather={weather}
             />
           </main>
-        )}
+        ) : null}
       </div>
     </div>
   );

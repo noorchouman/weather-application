@@ -7,25 +7,37 @@ export default function useWeather(query, selectedPlace) {
   const [error, setError] = useState("");
 
   useEffect(() => {
+    if (!query && !selectedPlace) return;
+
+    const controller = new AbortController();
+
     async function loadWeather() {
       setLoading(true);
       setError("");
 
       try {
-        const place = selectedPlace || (await fetchPlaceByName(query));
-        const weatherData = await fetchWeatherByCoords(place);
+        const place = selectedPlace
+          ? selectedPlace
+          : await fetchPlaceByName(query, controller.signal);
+
+        const weatherData = await fetchWeatherByCoords(place, controller.signal);
         setWeather(weatherData);
       } catch (err) {
+        if (err.name === "AbortError") return;
         setError(err.message || "Something went wrong");
         setWeather(null);
       } finally {
-        setLoading(false);
+        if (!controller.signal.aborted) {
+          setLoading(false);
+        }
       }
     }
 
-    if (query) {
-      loadWeather();
-    }
+    loadWeather();
+
+    return () => {
+      controller.abort();
+    };
   }, [query, selectedPlace]);
 
   return { weather, loading, error };
