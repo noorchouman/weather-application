@@ -1,6 +1,8 @@
+import { memo } from "react";
+import PropTypes from "prop-types";
 import { getWeatherMeta } from "../utils/weatherUtils";
 
-export default function WeeklyRow({ day, code, max, min }) {
+function WeeklyRow({ day, code, max, min }) {
   const meta = getWeatherMeta(code);
   const Icon = meta.icon;
 
@@ -8,7 +10,7 @@ export default function WeeklyRow({ day, code, max, min }) {
     <div className="forecast-row">
       <div className="forecast-left">
         <div className="forecast-icon-wrap">
-          <Icon size={24} />
+          <Icon size={24} aria-hidden="true" />
         </div>
         <div>
           <div className="forecast-time">{day}</div>
@@ -25,3 +27,12 @@ export default function WeeklyRow({ day, code, max, min }) {
     </div>
   );
 }
+
+WeeklyRow.propTypes = {
+  day: PropTypes.string.isRequired,
+  code: PropTypes.number.isRequired,
+  max: PropTypes.number.isRequired,
+  min: PropTypes.number.isRequired,
+};
+
+export default memo(WeeklyRow);

@@ -1,29 +1,79 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  FALLBACK_CITY,
+  GEOLOCATION_TIMEOUT_MS,
+  LOCAL_STORAGE_CITY_KEY,
+  SEARCH_DEBOUNCE_MS,
+} from "../config/constants";
 import { fetchPlaceSuggestions } from "../services/weatherApi";
 
-const DEFAULT_QUERY = "Beirut";
-const SEARCH_DEBOUNCE_MS = 300;
+function getStoredCity() {
+  return localStorage.getItem(LOCAL_STORAGE_CITY_KEY) || FALLBACK_CITY;
+}
 
 /**
  * input = what's shown in the text field
  * query = the submitted search term actually used for weather fetching
  */
-export default function usePlaceSearch(defaultQuery = DEFAULT_QUERY) {
+export default function usePlaceSearch() {
   const [input, setInput] = useState("");
-  const [query, setQuery] = useState(defaultQuery);
+  const [query, setQuery] = useState(getStoredCity);
   const [suggestions, setSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [searchingPlaces, setSearchingPlaces] = useState(false);
   const [placeSearchError, setPlaceSearchError] = useState("");
   const [selectedPlace, setSelectedPlace] = useState(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [activeSuggestionIndex, setActiveSuggestionIndex] = useState(-1);
 
   const searchBoxRef = useRef(null);
+
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_CITY_KEY, query);
+  }, [query]);
+
+  useEffect(() => {
+    if (!navigator.geolocation) return;
+    if (localStorage.getItem(LOCAL_STORAGE_CITY_KEY)) return;
+
+    let cancelled = false;
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        if (cancelled) return;
+
+        const { latitude, longitude } = position.coords;
+
+        setSelectedPlace({
+          id: `geo-${latitude}-${longitude}`,
+          name: "Current Location",
+          country: "",
+          admin1: "",
+          latitude,
+          longitude,
+        });
+        setQuery("Current Location");
+      },
+      () => {
+        // fall back silently
+      },
+      {
+        enableHighAccuracy: false,
+        timeout: GEOLOCATION_TIMEOUT_MS,
+        maximumAge: 60000,
+      }
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!isTyping || input.trim().length < 2) {
       setSuggestions([]);
       setPlaceSearchError("");
+      setActiveSuggestionIndex(-1);
       return;
     }
 
@@ -37,11 +87,13 @@ export default function usePlaceSearch(defaultQuery = DEFAULT_QUERY) {
         const results = await fetchPlaceSuggestions(input.trim(), controller.signal);
         setSuggestions(results);
         setShowSuggestions(true);
+        setActiveSuggestionIndex(results.length > 0 ? 0 : -1);
       } catch (err) {
         if (err.name === "AbortError") return;
         setSuggestions([]);
         setPlaceSearchError("Could not load place suggestions");
         setShowSuggestions(true);
+        setActiveSuggestionIndex(-1);
       } finally {
         if (!controller.signal.aborted) {
           setSearchingPlaces(false);
@@ -55,19 +107,34 @@ export default function usePlaceSearch(defaultQuery = DEFAULT_QUERY) {
     };
   }, [input, isTyping]);
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (searchBoxRef.current && !searchBoxRef.current.contains(event.target)) {
-        setShowSuggestions(false);
-        setIsTyping(false);
-      }
+  const handleClickOutside = useCallback((event) => {
+    if (searchBoxRef.current && !searchBoxRef.current.contains(event.target)) {
+      setShowSuggestions(false);
+      setIsTyping(false);
+      setActiveSuggestionIndex(-1);
     }
+  }, []);
 
+  useEffect(() => {
     document.addEventListener("mousedown", handleClickOutside);
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
-  }, []);
+  }, [handleClickOutside]);
+
+  function commitSuggestion(place) {
+    const formatted = [place.name, place.country].filter(Boolean).join(", ");
+
+    setInput(formatted);
+    setSelectedPlace(place);
+    setQuery(formatted);
+    setSuggestions([]);
+    setPlaceSearchError("");
+    setShowSuggestions(false);
+    setIsTyping(false);
+    setActiveSuggestionIndex(-1);
+  }
 
   function handleInputChange(value) {
     setInput(value);
@@ -92,37 +159,65 @@ export default function usePlaceSearch(defaultQuery = DEFAULT_QUERY) {
     setPlaceSearchError("");
     setShowSuggestions(false);
     setIsTyping(false);
+    setActiveSuggestionIndex(-1);
   }
 
   function handleSuggestionClick(place) {
-    const formatted = [place.name, place.country].filter(Boolean).join(", ");
+    commitSuggestion(place);
+  }
 
-    setInput(formatted);
-    setSelectedPlace(place);
-    setQuery(formatted);
-    setSuggestions([]);
-    setPlaceSearchError("");
-    setShowSuggestions(false);
-    setIsTyping(false);
+  function handleInputKeyDown(event) {
+    if (!showSuggestions && event.key === "ArrowDown" && suggestions.length > 0) {
+      setShowSuggestions(true);
+      setActiveSuggestionIndex(0);
+      return;
+    }
+
+    if (!showSuggestions) return;
+
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      setActiveSuggestionIndex((prev) =>
+        prev < suggestions.length - 1 ? prev + 1 : 0
+      );
+    }
+
+    if (event.key === "ArrowUp") {
+      event.preventDefault();
+      setActiveSuggestionIndex((prev) =>
+        prev > 0 ? prev - 1 : suggestions.length - 1
+      );
+    }
+
+    if (
+      event.key === "Enter" &&
+      activeSuggestionIndex >= 0 &&
+      suggestions[activeSuggestionIndex]
+    ) {
+      event.preventDefault();
+      commitSuggestion(suggestions[activeSuggestionIndex]);
+    }
+
+    if (event.key === "Escape") {
+      setShowSuggestions(false);
+      setActiveSuggestionIndex(-1);
+    }
   }
 
   return {
-    searchState: {
-      input,
-      suggestions,
-      showSuggestions,
-      searchingPlaces,
-      placeSearchError,
-      searchBoxRef,
-    },
-    searchActions: {
-      handleInputChange,
-      handleInputFocus,
-      setShowSuggestions,
-      handleSubmit,
-      handleSuggestionClick,
-    },
+    input,
     query,
     selectedPlace,
+    suggestions,
+    showSuggestions,
+    searchingPlaces,
+    placeSearchError,
+    activeSuggestionIndex,
+    searchBoxRef,
+    handleInputChange,
+    handleInputFocus,
+    handleInputKeyDown,
+    handleSubmit,
+    handleSuggestionClick,
   };
 }

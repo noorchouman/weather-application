@@ -1,13 +1,15 @@
+import {
+  DAILY_SLOTS,
+  HOURLY_SLOTS,
+  MAX_SUGGESTIONS,
+} from "../config/constants";
+
 const WEATHER_API_URL =
   import.meta.env.VITE_WEATHER_API_URL || "https://api.open-meteo.com/v1/forecast";
 
 const GEOCODING_API_URL =
   import.meta.env.VITE_GEOCODING_API_URL ||
   "https://geocoding-api.open-meteo.com/v1/search";
-
-const MAX_SUGGESTIONS = 6;
-const HOURLY_SLOTS = 8;
-const DAILY_SLOTS = 7;
 
 export async function fetchPlaceSuggestions(searchText, signal) {
   const res = await fetch(
@@ -56,8 +58,10 @@ export async function fetchPlaceByName(cityName, signal) {
   const place = data.results[0];
 
   return {
+    id: place.id ?? `${place.name}-${place.latitude}-${place.longitude}`,
     name: place.name,
     country: place.country,
+    admin1: place.admin1 || "",
     latitude: place.latitude,
     longitude: place.longitude,
   };

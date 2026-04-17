@@ -1,3 +1,4 @@
+import PropTypes from "prop-types";
 import HourlyRow from "./HourlyRow";
 import WeeklyRow from "./WeeklyRow";
 import { formatDay, formatHour } from "../utils/weatherUtils";
@@ -11,6 +12,7 @@ export default function ForecastPanel({ activeTab, setActiveTab, weather }) {
             className={`tab ${activeTab === "today" ? "active" : ""}`}
             onClick={() => setActiveTab("today")}
             type="button"
+            aria-label="Show today's forecast"
           >
             Today
           </button>
@@ -18,6 +20,7 @@ export default function ForecastPanel({ activeTab, setActiveTab, weather }) {
             className={`tab ${activeTab === "week" ? "active" : ""}`}
             onClick={() => setActiveTab("week")}
             type="button"
+            aria-label="Show weekly forecast"
           >
             This Week
           </button>
@@ -26,19 +29,19 @@ export default function ForecastPanel({ activeTab, setActiveTab, weather }) {
 
       <div className="forecast-list">
         {activeTab === "today"
-          ? weather.hourly.map((item, i) => (
+          ? weather.hourly.map((item) => (
               <HourlyRow
-                key={i}
-                time={i === 0 ? "Now" : formatHour(item.time)}
+                key={item.id}
+                time={item.id === weather.hourly[0].id ? "Now" : formatHour(item.time)}
                 code={item.code}
                 temp={item.temp}
                 wind={item.wind}
                 humidity={item.humidity}
               />
             ))
-          : weather.daily.map((item, i) => (
+          : weather.daily.map((item) => (
               <WeeklyRow
-                key={i}
+                key={item.id}
                 day={formatDay(item.day)}
                 code={item.code}
                 max={item.max}
@@ -49,3 +52,29 @@ export default function ForecastPanel({ activeTab, setActiveTab, weather }) {
     </aside>
   );
 }
+
+ForecastPanel.propTypes = {
+  activeTab: PropTypes.oneOf(["today", "week"]).isRequired,
+  setActiveTab: PropTypes.func.isRequired,
+  weather: PropTypes.shape({
+    hourly: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        time: PropTypes.string.isRequired,
+        code: PropTypes.number.isRequired,
+        temp: PropTypes.number.isRequired,
+        wind: PropTypes.number.isRequired,
+        humidity: PropTypes.number.isRequired,
+      })
+    ).isRequired,
+    daily: PropTypes.arrayOf(
+      PropTypes.shape({
+        id: PropTypes.string.isRequired,
+        day: PropTypes.string.isRequired,
+        code: PropTypes.number.isRequired,
+        max: PropTypes.number.isRequired,
+        min: PropTypes.number.isRequired,
+      })
+    ).isRequired,
+  }).isRequired,
+};

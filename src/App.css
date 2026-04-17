@@ -159,6 +159,10 @@ input {
   color: #7b859f;
 }
 
+.suggestion-item-active {
+  background: rgba(235, 240, 255, 0.9);
+}
+
 .suggestion-text {
   display: flex;
   flex-direction: column;
